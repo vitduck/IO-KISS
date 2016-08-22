@@ -35,8 +35,11 @@ has 'writer', (
     init_arg => undef, 
     
     default  => sub ( $self ) { 
+        # delete the file, then use append mode 
+        if ( -f $self->file ) { unlink $self->file }  
+
         # fh to file
-        open my $fh, '>', $self->file; 
+        open my $fh, '>>', $self->file; 
 
         return $fh; 
     }, 
@@ -99,6 +102,15 @@ has 'paragraph', (
         get_paragraphs => 'elements', 
     }, 
 ); 
+
+# Moose methods 
+sub print ( $self, @items ) { 
+    printf {$self->writer} "%s\n", @items; 
+} 
+
+sub printf ( $self, $format, @items ) { 
+    printf {$self->writer} $format, @items; 
+}
 
 # simple constructors 
 override BUILDARGS => sub ( $class, @args ) { 
