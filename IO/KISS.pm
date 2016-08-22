@@ -1,31 +1,42 @@
 package IO::KISS; 
 
-# pragma
-use autodie; 
-use warnings FATAL => 'all'; 
-
 # cpan
 use Moose; 
 use namespace::autoclean; 
 
-# features
+# pragma
+use autodie; 
+use warnings FATAL => 'all'; 
 use experimental qw/signatures/; 
 
 # Moose attributes 
-has 'input', ( 
+has 'file', ( 
     is       => 'ro', 
     isa      => 'Str', 
     required => 1, 
 ); 
 
-has 'filehandle', ( 
+has 'reader', ( 
     is       => 'ro', 
     lazy     => 1, 
     init_arg => undef, 
 
     default  => sub ( $self ) { 
-        # open fh to either a file or a string
-        open my $fh, '<', ( -f $self->input ? $self->input : \$self->input ); 
+        # fh to either a file or a string
+        open my $fh, '<', ( -f $self->file ? $self->file : \$self->file ); 
+
+        return $fh; 
+    }, 
+); 
+
+has 'writer', ( 
+    is       => 'ro', 
+    lazy     => 1, 
+    init_arg => undef, 
+    
+    default  => sub ( $self ) { 
+        # fh to file
+        open my $fh, '>', $self->file; 
 
         return $fh; 
     }, 
@@ -40,10 +51,10 @@ has 'string', (
     reader   => 'slurp', 
 
     default  => sub ( $self ) { 
-        my $fh = $self->filehandle; 
+        my $fh = $self->reader;  
         chomp ( my $line = do { local $/ = undef; <$fh> } );
 
-    return $line; 
+        return $line; 
     }, 
 ); 
 
@@ -56,7 +67,7 @@ has 'line', (
     init_arg => undef, 
 
     default  => sub ( $self ) { 
-        my $fh   = $self->filehandle; 
+        my $fh   = $self->reader;  
         chomp ( my @lines = <$fh> ); 
 
         return \@lines; 
@@ -77,7 +88,7 @@ has 'paragraph', (
     init_arg => undef, 
 
     default  => sub ( $self ) { 
-        my $fh   = $self->filehandle; 
+        my $fh   = $self->reader;  
         chomp (my @paragraphs = do { local $/ = ''; <$fh> });  
 
         return \@paragraphs;  
@@ -91,7 +102,7 @@ has 'paragraph', (
 
 # simple constructors 
 override BUILDARGS => sub ( $class, @args ) { 
-    return ( @args == 1 ? { input => $args[0] } : super ); 
+    return ( @args == 1 ? { file => $args[0] } : super ); 
 }; 
 
 # speed-up object construction 

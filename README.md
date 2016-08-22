@@ -1,2 +1,2 @@
 # IO-KISS
-Yet another Perl IO 
+Keep It Simple and Stupid
