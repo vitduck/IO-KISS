@@ -20,6 +20,7 @@ has 'reader', (
     is       => 'ro', 
     lazy     => 1, 
     init_arg => undef, 
+    predicate => 'has_reader', 
 
     default  => sub ( $self ) { 
         # fh to either a file or a string
@@ -30,11 +31,12 @@ has 'reader', (
 ); 
 
 has 'writer', ( 
-    is       => 'ro', 
-    lazy     => 1, 
-    init_arg => undef, 
+    is        => 'ro', 
+    lazy      => 1, 
+    init_arg  => undef, 
+    predicate => 'has_writer', 
     
-    default  => sub ( $self ) { 
+    default   => sub ( $self ) { 
         # delete the file, then use append mode 
         if ( -f $self->file ) { unlink $self->file }  
 
@@ -46,12 +48,11 @@ has 'writer', (
 ); 
 
 # slurp mode 
-has 'string', ( 
+has 'slurp', ( 
     is       => 'ro', 
     isa      => 'Str', 
     lazy     => 1, 
     init_arg => undef, 
-    reader   => 'slurp', 
 
     default  => sub ( $self ) { 
         my $fh = $self->reader;  
