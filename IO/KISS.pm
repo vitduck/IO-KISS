@@ -8,7 +8,8 @@ use namespace::autoclean;
 # pragma
 use autodie; 
 use warnings FATAL => 'all'; 
-use experimental qw/signatures/; 
+use feature qw/switch/; 
+use experimental qw/signatures smartmatch/; 
 
 # Moose attributes 
 has 'file', ( 
@@ -28,16 +29,21 @@ has 'fh', (
     is        => 'ro', 
     lazy      => 1, 
     init_arg  => undef, 
-
     default   => sub ( $self ) { 
         my $fh; 
-
-        if    ( $self->mode eq 'r' ) { open $fh, '<' , ( -f $self->file ? $self->file : \$self->file ) }  
-        elsif ( $self->mode eq 'w' ) { open $fh, '>' , $self->file  }  
-        else                         { open $fh, '>>', $self->file }  
-
+        given ( $self->mode ) { 
+            when ( 'r' ) { open $fh, '<' , ( -f $self->file ? $self->file : \$self->file ) } 
+            when ( 'w' ) { open $fh, '>' , $self->file } 
+            when ( 'a' ) { open $fh, '>>', $self->file } 
+        }
         return $fh; 
     }, 
+); 
+
+has '_separator', ( 
+    is        => 'rw', 
+    init_arg  => 'undef', 
+    default   => "\n", 
 ); 
 
 # slurp mode 
@@ -46,13 +52,10 @@ has 'slurp', (
     isa       => 'Str', 
     lazy      => 1, 
     init_arg  => undef, 
-
     default   => sub ( $self ) { 
-        my $fh = $self->fh; 
-        chomp ( my $line = do { local $/ = undef; <$fh> } );
-
-        return $line; 
-    }, 
+        $self->_separator(undef); 
+        return $self->readline;  
+    }
 ); 
 
 # line mode 
@@ -62,15 +65,10 @@ has 'line', (
     traits    => ['Array'],
     lazy      => 1, 
     init_arg  => undef, 
-
     default   => sub ( $self ) { 
-        my $fh   = $self->fh;  
-        chomp ( my @lines = <$fh> ); 
-
-        return \@lines; 
+        return $self->readline; 
     },  
-    
-    handles => { 
+    handles   => { 
         get_line  => 'shift', 
         get_lines => 'elements', 
     }, 
@@ -83,22 +81,25 @@ has 'paragraph', (
     traits    => ['Array'],
     lazy      => 1, 
     init_arg  => undef, 
-
     default   => sub ( $self ) { 
-        my $fh   = $self->fh;   
-        chomp (my @paragraphs = do { local $/ = ''; <$fh> });  
-
-        return \@paragraphs;  
-    },  
-
-    handles => { 
+        $self->_separator(''); 
+        return $self->readline;  
+    }, 
+    handles   => { 
         get_paragraph  => 'shift', 
         get_paragraphs => 'elements', 
     }, 
 ); 
 
-sub print ( $self, @items,  ) { 
-    printf {$self->fh} "%s\n", @items; 
+# Moose methods 
+# Error: Prototype mismatch: sub IO::KISS::eead (*\$$;$) vs none
+sub readline ( $self ) { 
+    chomp ( my @lines  = do { local $/ = $self->_separator; readline $self->fh } ); 
+    return defined $self->_separator ? \@lines : shift @lines; 
+} 
+
+sub print ( $self, @items ) { 
+    print {$self->fh} "@items\n"; 
 } 
 
 sub printf ( $self, $format, @items ) { 
@@ -107,10 +108,7 @@ sub printf ( $self, $format, @items ) {
 
 # simple constructors 
 override BUILDARGS => sub ( $class, @args ) { 
-    return 
-        @args == 2  ? 
-        { file => $args[0], mode => $args[1] } : 
-        super; 
+    return @args == 2  ? { file => $args[0], mode => $args[1] } : super; 
 }; 
 
 # speed-up object construction 
