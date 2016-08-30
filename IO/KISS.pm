@@ -13,7 +13,7 @@ use experimental qw/signatures smartmatch/;
 
 # Moose attributes 
 has 'file', ( 
-    is        => 'ro', 
+    is        => 'rw', 
     isa       => 'Str', 
     required  => 1, 
 ); 
@@ -105,6 +105,11 @@ sub print ( $self, @items ) {
 sub printf ( $self, $format, @items ) { 
     printf {$self->fh} $format, @items; 
 }
+
+sub BUILD ( $self, @args ) { 
+    chomp ( my $removed_newline = $self->file );  
+    $self->file($removed_newline); 
+} 
 
 # simple constructors 
 override BUILDARGS => sub ( $class, @args ) { 
