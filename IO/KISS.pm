@@ -3,13 +3,13 @@ package IO::KISS;
 # cpan
 use Moose; 
 use MooseX::Types; 
-use MooseX::Types::Moose qw/Str Undef Ref ArrayRef GlobRef/; 
+use MooseX::Types::Moose qw/Undef Str Ref ArrayRef GlobRef/; 
 use namespace::autoclean; 
 
 # pragma
-use autodie; 
-use warnings FATAL => 'all'; 
-use feature qw/switch/; 
+use warnings     FATAL => 'all'; 
+use autodie      qw/open/; 
+use feature      qw/switch/; 
 use experimental qw/signatures smartmatch/; 
 
 # Moose attributes 
@@ -22,7 +22,7 @@ has 'stream', (
 # read | write | append 
 has 'mode', ( 
     is        => 'ro', 
-    isa       => enum([ qw/r w a/ ]),   
+    isa       => enum([ qw( r w a ) ]),   
     required  => 1, 
 ); 
 
@@ -56,8 +56,8 @@ has 'slurp', (
     lazy      => 1, 
     init_arg  => undef, 
     default   => sub ( $self ) { 
-        $self->_separator(undef); 
-        return $self->readline;  
+        $self->_separator( undef ); 
+        return $self->read; 
     }
 ); 
 
@@ -69,7 +69,7 @@ has 'line', (
     lazy      => 1, 
     init_arg  => undef, 
     default   => sub ( $self ) { 
-        return $self->readline; 
+        return $self->read; 
     },  
     handles   => { 
         get_line  => 'shift', 
@@ -86,7 +86,7 @@ has 'paragraph', (
     init_arg  => undef, 
     default   => sub ( $self ) { 
         $self->_separator(''); 
-        return $self->readline;  
+        return $self->read; 
     }, 
     handles   => { 
         get_paragraph  => 'shift', 
@@ -96,12 +96,20 @@ has 'paragraph', (
 
 # Moose methods 
 # Error: Prototype mismatch: sub IO::KISS::read (*\$$;$) vs none
-sub readline ( $self ) { 
-    my @lines  = do { 
-        local $/ = $self->_separator; 
-        readline $self->fh;  
-    };  
-    chomp @lines; 
+sub read ( $self ) { 
+    # change the record seperator ( if neccesary )
+    # then read everything usind list context 
+    chomp ( 
+        my @lines  = do { 
+            local $/ = $self->_separator; 
+            readline $self->fh;  
+        }   
+    ); 
+
+    # close fh 
+    $self->close; 
+    
+    # for undef seperator ( slurp mode ), return a scalar
     return defined $self->_separator ? \@lines : shift @lines; 
 } 
 
@@ -112,6 +120,10 @@ sub print ( $self, @items ) {
 sub printf ( $self, $format, @items ) { 
     printf {$self->fh} $format, @items; 
 }
+
+sub close ( $self ) { 
+    close $self->fh; 
+} 
 
 # simple constructors 
 override BUILDARGS => sub ( $class, @args ) { 
