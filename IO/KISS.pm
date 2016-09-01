@@ -3,6 +3,7 @@ package IO::KISS;
 # cpan
 use Moose; 
 use MooseX::Types; 
+use MooseX::Types::Moose qw/Str Undef Ref ArrayRef GlobRef/; 
 use namespace::autoclean; 
 
 # pragma
@@ -12,9 +13,9 @@ use feature qw/switch/;
 use experimental qw/signatures smartmatch/; 
 
 # Moose attributes 
-has 'file', ( 
-    is        => 'rw', 
-    isa       => 'Str', 
+has 'stream', ( 
+    is        => 'ro', 
+    isa       => Str | Ref, 
     required  => 1, 
 ); 
 
@@ -27,14 +28,15 @@ has 'mode', (
 
 has 'fh', ( 
     is        => 'ro', 
+    isa       => GlobRef, 
     lazy      => 1, 
     init_arg  => undef, 
     default   => sub ( $self ) { 
         my $fh; 
         given ( $self->mode ) { 
-            when ( 'r' ) { open $fh, '<' , ( -f $self->file ? $self->file : \$self->file ) } 
-            when ( 'w' ) { open $fh, '>' , $self->file } 
-            when ( 'a' ) { open $fh, '>>', $self->file } 
+            when ( 'r' ) { open $fh, '<' , $self->stream } 
+            when ( 'w' ) { open $fh, '>' , $self->stream } 
+            when ( 'a' ) { open $fh, '>>', $self->stream }
         }
         return $fh; 
     }, 
@@ -42,6 +44,7 @@ has 'fh', (
 
 has '_separator', ( 
     is        => 'rw', 
+    isa       => Str | Undef, 
     init_arg  => 'undef', 
     default   => "\n", 
 ); 
@@ -49,7 +52,7 @@ has '_separator', (
 # slurp mode 
 has 'slurp', ( 
     is        => 'ro', 
-    isa       => 'Str', 
+    isa       => Str,  
     lazy      => 1, 
     init_arg  => undef, 
     default   => sub ( $self ) { 
@@ -61,7 +64,7 @@ has 'slurp', (
 # line mode 
 has 'line', ( 
     is        => 'ro', 
-    isa       => 'ArrayRef[Str]',  
+    isa       => ArrayRef[Str],  
     traits    => ['Array'],
     lazy      => 1, 
     init_arg  => undef, 
@@ -77,7 +80,7 @@ has 'line', (
 # paragraph mode 
 has 'paragraph', ( 
     is        => 'ro', 
-    isa       => 'ArrayRef[Str]',  
+    isa       => ArrayRef[Str],  
     traits    => ['Array'],
     lazy      => 1, 
     init_arg  => undef, 
@@ -92,9 +95,13 @@ has 'paragraph', (
 ); 
 
 # Moose methods 
-# Error: Prototype mismatch: sub IO::KISS::eead (*\$$;$) vs none
+# Error: Prototype mismatch: sub IO::KISS::read (*\$$;$) vs none
 sub readline ( $self ) { 
-    chomp ( my @lines  = do { local $/ = $self->_separator; readline $self->fh } ); 
+    my @lines  = do { 
+        local $/ = $self->_separator; 
+        readline $self->fh;  
+    };  
+    chomp @lines; 
     return defined $self->_separator ? \@lines : shift @lines; 
 } 
 
@@ -106,14 +113,9 @@ sub printf ( $self, $format, @items ) {
     printf {$self->fh} $format, @items; 
 }
 
-sub BUILD ( $self, @args ) { 
-    chomp ( my $removed_newline = $self->file );  
-    $self->file($removed_newline); 
-} 
-
 # simple constructors 
 override BUILDARGS => sub ( $class, @args ) { 
-    return @args == 2  ? { file => $args[0], mode => $args[1] } : super; 
+    return @args == 2  ? { stream => $args[0], mode => $args[1] } : super; 
 }; 
 
 # speed-up object construction 
