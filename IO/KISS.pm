@@ -1,14 +1,14 @@
 package IO::KISS; 
 
-use strictures 2; 
-use feature qw/switch/; 
-
 use Moose; 
 use MooseX::Types; 
 use MooseX::Types::Moose qw/Undef Str Ref ArrayRef GlobRef/; 
 
-use experimental qw/signatures smartmatch/; 
+use autodie; 
+use strictures 2; 
 use namespace::autoclean; 
+use feature qw/switch/; 
+use experimental qw/signatures smartmatch/; 
 
 # Moose attributes 
 has 'stream', ( 
@@ -29,83 +29,76 @@ has 'fh', (
     isa       => GlobRef, 
     lazy      => 1, 
     init_arg  => undef,
-    builder   => 'open', 
+    builder   => 'open_fh', 
 ); 
 
 has 'separator', ( 
     is        => 'ro', 
     isa       => Str | Undef, 
-    init_arg  => 'undef', 
-    default   => "\n", 
+    lazy      => 1, 
+    init_arg  => undef, 
     writer    => '_set_separator', 
+    default   => "\n", 
 ); 
 
-# slurp mode 
-has 'slurp', ( 
+has 'slurp_mode', ( 
     is        => 'ro', 
     isa       => Str,  
     lazy      => 1, 
     init_arg  => undef, 
-    builder   => '_slurp_mode', 
+    reader    => 'get_string',  
+
+    default   => sub ( $self ) { 
+        $self->_set_separator(undef); 
+        return $self->read_fh; 
+    } 
 ); 
 
-# line mode 
-has 'line', ( 
+has 'line_mode', ( 
     is        => 'ro', 
     isa       => ArrayRef[Str],  
     traits    => ['Array'],
     lazy      => 1, 
     init_arg  => undef, 
-    builder   => '_line_mode', 
-    handles   => { get_line => 'shift', get_lines => 'elements' },  
+
+    default   => sub ( $self ) { 
+        return $self->read_fh; 
+    },  
+
+    handles   => { 
+        get_line  => 'shift', 
+        get_lines => 'elements' 
+    },  
 ); 
 
-# paragraph mode 
-has 'paragraph', ( 
+has 'paragraph_mode', ( 
     is        => 'ro', 
     isa       => ArrayRef[Str],  
     traits    => ['Array'],
     lazy      => 1, 
     init_arg  => undef, 
-    builder   => '_paragraph_mode', 
-    handles   => { get_paragraph => 'shift', get_paragraphs => 'elements' }, 
+
+    default   => sub ( $self ) { 
+        $self->_set_separator(''); 
+        return $self->read_fh; 
+    },  
+
+    handles   => { 
+        get_paragraph  => 'shift', 
+        get_paragraphs => 'elements' }, 
 ); 
 
-sub open ( $self ) { 
+sub open_fh ( $self ) { 
     my $fh; 
-    try { 
-        use autodie qw/open/;  
-        given ( $self->mode ) { 
-            when ( 'r' ) { open $fh, '<' , $self->stream } 
-            when ( 'w' ) { open $fh, '>' , $self->stream } 
-            when ( 'a' ) { open $fh, '>>', $self->stream }
-        }
+    given ( $self->mode ) { 
+        when ( 'r' ) { open $fh, '<' , $self->stream } 
+        when ( 'w' ) { open $fh, '>' , $self->stream } 
+        when ( 'a' ) { open $fh, '>>', $self->stream }
     }
     return $fh; 
 } 
 
-sub close ( $self ) { 
-    try { 
-        use autodie qw/close/; 
-        close $self->fh; 
-    }
-} 
-
-sub _slurp_mode ( $self ) { 
-    $self->_set_separator( undef ); 
-    return $self->read; 
-} 
-
-sub _line_mode ( $self ) { 
-    return $self->read
-} 
-
-sub _paragraph_mode ( $self ) { 
-    $self->_set_separator( '' ); 
-    return $self->read; 
-} 
-
-sub read ( $self ) { 
+sub read_fh ( $self ) { 
     # list context;
     chomp ( 
         my @lines  = do { 
@@ -113,11 +106,17 @@ sub read ( $self ) {
             readline $self->fh;  
         }   
     ); 
-    $self->close; 
+
+    # close 
+    $self->close_fh; 
 
     # slurp -> undef -> scalar 
     # line | paragraph -> arrayref
     return defined $self->separator ? \@lines : shift @lines; 
+} 
+
+sub close_fh ( $self ) { 
+    close $self->fh; 
 } 
 
 sub print ( $self, @items ) { 
