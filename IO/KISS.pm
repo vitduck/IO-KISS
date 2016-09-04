@@ -1,16 +1,14 @@
 package IO::KISS; 
 
-# cpan
+use strictures 2; 
+use feature qw/switch/; 
+
 use Moose; 
 use MooseX::Types; 
 use MooseX::Types::Moose qw/Undef Str Ref ArrayRef GlobRef/; 
-use namespace::autoclean; 
 
-# pragma
-use warnings     FATAL => 'all'; 
-use autodie      qw/open/; 
-use feature      qw/switch/; 
 use experimental qw/signatures smartmatch/; 
+use namespace::autoclean; 
 
 # Moose attributes 
 has 'stream', ( 
@@ -30,23 +28,16 @@ has 'fh', (
     is        => 'ro', 
     isa       => GlobRef, 
     lazy      => 1, 
-    init_arg  => undef, 
-    default   => sub ( $self ) { 
-        my $fh; 
-        given ( $self->mode ) { 
-            when ( 'r' ) { open $fh, '<' , $self->stream } 
-            when ( 'w' ) { open $fh, '>' , $self->stream } 
-            when ( 'a' ) { open $fh, '>>', $self->stream }
-        }
-        return $fh; 
-    }, 
+    init_arg  => undef,
+    builder   => 'open', 
 ); 
 
-has '_separator', ( 
-    is        => 'rw', 
+has 'separator', ( 
+    is        => 'ro', 
     isa       => Str | Undef, 
     init_arg  => 'undef', 
     default   => "\n", 
+    writer    => '_set_separator', 
 ); 
 
 # slurp mode 
@@ -55,10 +46,7 @@ has 'slurp', (
     isa       => Str,  
     lazy      => 1, 
     init_arg  => undef, 
-    default   => sub ( $self ) { 
-        $self->_separator( undef ); 
-        return $self->read; 
-    }
+    builder   => '_slurp_mode', 
 ); 
 
 # line mode 
@@ -68,13 +56,8 @@ has 'line', (
     traits    => ['Array'],
     lazy      => 1, 
     init_arg  => undef, 
-    default   => sub ( $self ) { 
-        return $self->read; 
-    },  
-    handles   => { 
-        get_line  => 'shift', 
-        get_lines => 'elements', 
-    }, 
+    builder   => '_line_mode', 
+    handles   => { get_line => 'shift', get_lines => 'elements' },  
 ); 
 
 # paragraph mode 
@@ -84,33 +67,57 @@ has 'paragraph', (
     traits    => ['Array'],
     lazy      => 1, 
     init_arg  => undef, 
-    default   => sub ( $self ) { 
-        $self->_separator(''); 
-        return $self->read; 
-    }, 
-    handles   => { 
-        get_paragraph  => 'shift', 
-        get_paragraphs => 'elements', 
-    }, 
+    builder   => '_paragraph_mode', 
+    handles   => { get_paragraph => 'shift', get_paragraphs => 'elements' }, 
 ); 
 
-# Moose methods 
-# Error: Prototype mismatch: sub IO::KISS::read (*\$$;$) vs none
+sub open ( $self ) { 
+    my $fh; 
+    try { 
+        use autodie qw/open/;  
+        given ( $self->mode ) { 
+            when ( 'r' ) { open $fh, '<' , $self->stream } 
+            when ( 'w' ) { open $fh, '>' , $self->stream } 
+            when ( 'a' ) { open $fh, '>>', $self->stream }
+        }
+    }
+    return $fh; 
+} 
+
+sub close ( $self ) { 
+    try { 
+        use autodie qw/close/; 
+        close $self->fh; 
+    }
+} 
+
+sub _slurp_mode ( $self ) { 
+    $self->_set_separator( undef ); 
+    return $self->read; 
+} 
+
+sub _line_mode ( $self ) { 
+    return $self->read
+} 
+
+sub _paragraph_mode ( $self ) { 
+    $self->_set_separator( '' ); 
+    return $self->read; 
+} 
+
 sub read ( $self ) { 
-    # change the record seperator ( if neccesary )
-    # then read everything usind list context 
+    # list context;
     chomp ( 
         my @lines  = do { 
-            local $/ = $self->_separator; 
+            local $/ = $self->separator; 
             readline $self->fh;  
         }   
     ); 
-
-    # close fh 
     $self->close; 
-    
-    # for undef seperator ( slurp mode ), return a scalar
-    return defined $self->_separator ? \@lines : shift @lines; 
+
+    # slurp -> undef -> scalar 
+    # line | paragraph -> arrayref
+    return defined $self->separator ? \@lines : shift @lines; 
 } 
 
 sub print ( $self, @items ) { 
@@ -121,16 +128,10 @@ sub printf ( $self, $format, @items ) {
     printf {$self->fh} $format, @items; 
 }
 
-sub close ( $self ) { 
-    close $self->fh; 
-} 
-
-# simple constructors 
 override BUILDARGS => sub ( $class, @args ) { 
     return @args == 2  ? { stream => $args[0], mode => $args[1] } : super; 
 }; 
 
-# speed-up object construction 
 __PACKAGE__->meta->make_immutable;
 
 1; 
