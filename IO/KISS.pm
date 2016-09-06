@@ -4,7 +4,6 @@ use Moose;
 use MooseX::Types; 
 use MooseX::Types::Moose qw/Undef Str Ref ArrayRef GlobRef/; 
 
-use autodie; 
 use strictures 2; 
 use namespace::autoclean; 
 use feature qw/switch/; 
@@ -29,7 +28,19 @@ has 'fh', (
     isa       => GlobRef, 
     lazy      => 1, 
     init_arg  => undef,
-    builder   => 'open_fh', 
+    
+    default   => sub ( $self ) { 
+        use autodie qw/open/; 
+        my $fh; 
+        
+        given ( $self->mode ) { 
+            when ( 'r' ) { open $fh, '<' , $self->stream } 
+            when ( 'w' ) { open $fh, '>' , $self->stream } 
+            when ( 'a' ) { open $fh, '>>', $self->stream }
+        }
+
+        return $fh; 
+    }
 ); 
 
 has 'separator', ( 
@@ -88,16 +99,6 @@ has 'paragraph_mode', (
         get_paragraphs => 'elements' }, 
 ); 
 
-sub open_fh ( $self ) { 
-    my $fh; 
-    given ( $self->mode ) { 
-        when ( 'r' ) { open $fh, '<' , $self->stream } 
-        when ( 'w' ) { open $fh, '>' , $self->stream } 
-        when ( 'a' ) { open $fh, '>>', $self->stream }
-    }
-    return $fh; 
-} 
-
 sub read_fh ( $self ) { 
     # list context;
     chomp ( 
@@ -107,15 +108,13 @@ sub read_fh ( $self ) {
         }   
     ); 
 
-    # close 
-    $self->close_fh; 
-
     # slurp -> undef -> scalar 
     # line | paragraph -> arrayref
     return defined $self->separator ? \@lines : shift @lines; 
 } 
 
-sub close_fh ( $self ) { 
+sub close ( $self ) { 
+    use autodie qw/close/; 
     close $self->fh; 
 } 
 
