@@ -2,12 +2,12 @@ package IO::KISS;
 
 use Moose; 
 use MooseX::Types; 
-use MooseX::Types::Moose qw/Undef Str Ref ArrayRef GlobRef/; 
+use MooseX::Types::Moose qw( Undef Str Ref ArrayRef GlobRef ); 
 
 use strictures 2; 
 use namespace::autoclean; 
-use feature qw/switch/; 
-use experimental qw/signatures smartmatch/; 
+use feature qw( switch ); 
+use experimental qw( signatures smartmatch ); 
 
 # Moose attributes 
 has 'stream', ( 
@@ -19,7 +19,7 @@ has 'stream', (
 # read | write | append 
 has 'mode', ( 
     is        => 'ro', 
-    isa       => enum([ qw( r w a ) ]),   
+    isa       => enum( [ qw( r w a ) ] ),   
     required  => 1, 
 ); 
 
@@ -30,7 +30,7 @@ has 'fh', (
     init_arg  => undef,
     
     default   => sub ( $self ) { 
-        use autodie qw/open/; 
+        use autodie qw( open ); 
         my $fh; 
         
         given ( $self->mode ) { 
@@ -67,8 +67,8 @@ has 'slurp_mode', (
 
 has 'line_mode', ( 
     is        => 'ro', 
-    isa       => ArrayRef[Str],  
-    traits    => ['Array'],
+    isa       => ArrayRef[ Str ],  
+    traits    => [ 'Array' ],
     lazy      => 1, 
     init_arg  => undef, 
 
@@ -84,8 +84,8 @@ has 'line_mode', (
 
 has 'paragraph_mode', ( 
     is        => 'ro', 
-    isa       => ArrayRef[Str],  
-    traits    => ['Array'],
+    isa       => ArrayRef[ Str ],  
+    traits    => [ 'Array' ],
     lazy      => 1, 
     init_arg  => undef, 
 
@@ -114,16 +114,16 @@ sub read_fh ( $self ) {
 } 
 
 sub close ( $self ) { 
-    use autodie qw/close/; 
+    use autodie qw( close ); 
     close $self->fh; 
 } 
 
 sub print ( $self, @items ) { 
-    print {$self->fh} "@items\n"; 
+    print { $self->fh } "@items\n"; 
 } 
 
 sub printf ( $self, $format, @items ) { 
-    printf {$self->fh} $format, @items; 
+    printf { $self->fh } $format, @items; 
 }
 
 override BUILDARGS => sub ( $class, @args ) { 
