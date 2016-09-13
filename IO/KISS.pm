@@ -1,12 +1,14 @@
 package IO::KISS; 
 
+use strict; 
+use warnings FATAL => 'all'; 
+use feature  qw( switch ); 
+use namespace::autoclean; 
+
 use Moose; 
 use MooseX::Types; 
 use MooseX::Types::Moose qw( Undef Str Ref ArrayRef GlobRef ); 
 
-use strictures 2; 
-use namespace::autoclean; 
-use feature qw( switch ); 
 use experimental qw( signatures smartmatch ); 
 
 # Moose attributes 
@@ -60,8 +62,10 @@ has 'slurp_mode', (
     reader    => 'get_string',  
 
     default   => sub ( $self ) { 
-        $self->_set_separator(undef); 
-        return $self->read_fh; 
+        return do { 
+            $self->_set_separator( undef ); 
+            $self->read_fh; 
+        }
     } 
 ); 
 
@@ -90,8 +94,10 @@ has 'paragraph_mode', (
     init_arg  => undef, 
 
     default   => sub ( $self ) { 
-        $self->_set_separator(''); 
-        return $self->read_fh; 
+        return do { 
+            $self->_set_separator( '' ); 
+            $self->read_fh; 
+        }
     },  
 
     handles   => { 
@@ -100,7 +106,7 @@ has 'paragraph_mode', (
 ); 
 
 sub read_fh ( $self ) { 
-    # list context;
+    # list context
     chomp ( 
         my @lines  = do { 
             local $/ = $self->separator; 
@@ -108,9 +114,12 @@ sub read_fh ( $self ) {
         }   
     ); 
 
-    # slurp -> undef -> scalar 
     # line | paragraph -> arrayref
-    return defined $self->separator ? \@lines : shift @lines; 
+    return (
+        defined $self->separator ? 
+        \@lines : 
+        shift @lines 
+    )
 } 
 
 sub close ( $self ) { 
