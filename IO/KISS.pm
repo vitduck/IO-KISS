@@ -59,7 +59,7 @@ has 'slurp_mode', (
     isa       => Str,  
     lazy      => 1, 
     init_arg  => undef, 
-    reader    => 'get_string',  
+    reader    => 'slurp',  
 
     default   => sub ( $self ) { 
         return do { 
