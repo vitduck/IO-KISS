@@ -2,23 +2,21 @@ package IO::KISS;
 
 use strict; 
 use warnings FATAL => 'all'; 
-use feature  qw( switch ); 
-use namespace::autoclean; 
 
 use Moose; 
 use MooseX::Types; 
 use MooseX::Types::Moose qw( Undef Str Ref ArrayRef GlobRef ); 
 
+use namespace::autoclean; 
+use feature  qw( switch ); 
 use experimental qw( signatures smartmatch ); 
 
-# Moose attributes 
 has 'stream', ( 
     is        => 'ro', 
     isa       => Str | Ref, 
     required  => 1, 
 ); 
 
-# read | write | append 
 has 'mode', ( 
     is        => 'ro', 
     isa       => enum( [ qw( r w a ) ] ),   
@@ -30,19 +28,7 @@ has 'fh', (
     isa       => GlobRef, 
     lazy      => 1, 
     init_arg  => undef,
-    
-    default   => sub ( $self ) { 
-        use autodie qw( open ); 
-        my $fh; 
-        
-        given ( $self->mode ) { 
-            when ( 'r' ) { open $fh, '<' , $self->stream } 
-            when ( 'w' ) { open $fh, '>' , $self->stream } 
-            when ( 'a' ) { open $fh, '>>', $self->stream }
-        }
-
-        return $fh; 
-    }
+    builder   => 'open', 
 ); 
 
 has 'separator', ( 
@@ -60,13 +46,7 @@ has 'slurp_mode', (
     lazy      => 1, 
     init_arg  => undef, 
     reader    => 'slurp',  
-
-    default   => sub ( $self ) { 
-        return do { 
-            $self->_set_separator( undef ); 
-            $self->read_fh; 
-        }
-    } 
+    builder   => '_build_slurp'
 ); 
 
 has 'line_mode', ( 
@@ -75,11 +55,7 @@ has 'line_mode', (
     traits    => [ 'Array' ],
     lazy      => 1, 
     init_arg  => undef, 
-
-    default   => sub ( $self ) { 
-        return $self->read_fh; 
-    },  
-
+    builder   => '_build_line', 
     handles   => { 
         get_line  => 'shift', 
         get_lines => 'elements' 
@@ -92,18 +68,33 @@ has 'paragraph_mode', (
     traits    => [ 'Array' ],
     lazy      => 1, 
     init_arg  => undef, 
-
-    default   => sub ( $self ) { 
-        return do { 
-            $self->_set_separator( '' ); 
-            $self->read_fh; 
-        }
-    },  
-
+    builder   => '_build_paragraph', 
     handles   => { 
         get_paragraph  => 'shift', 
         get_paragraphs => 'elements' }, 
 ); 
+
+override BUILDARGS => sub ( $class, @args ) { 
+    return @args == 2  ? { stream => $args[0], mode => $args[1] } : super; 
+}; 
+
+sub open ( $self ) { 
+    use autodie qw( open ); 
+    my $fh; 
+
+    given ( $self->mode ) { 
+        when ( 'r' ) { open $fh, '<' , $self->stream } 
+        when ( 'w' ) { open $fh, '>' , $self->stream } 
+        when ( 'a' ) { open $fh, '>>', $self->stream }
+    }
+
+    return $fh; 
+} 
+
+sub close ( $self ) { 
+    use autodie qw( close ); 
+    close $self->fh; 
+} 
 
 sub read_fh ( $self ) { 
     # list context
@@ -113,18 +104,11 @@ sub read_fh ( $self ) {
             readline $self->fh;  
         }   
     ); 
+    
+    $self->close; 
 
     # line | paragraph -> arrayref
-    return (
-        defined $self->separator ? 
-        \@lines : 
-        shift @lines 
-    )
-} 
-
-sub close ( $self ) { 
-    use autodie qw( close ); 
-    close $self->fh; 
+    return defined $self->separator ? \@lines : shift @lines 
 } 
 
 sub print ( $self, @items ) { 
@@ -135,10 +119,24 @@ sub printf ( $self, $format, @items ) {
     printf { $self->fh } $format, @items; 
 }
 
-override BUILDARGS => sub ( $class, @args ) { 
-    return @args == 2  ? { stream => $args[0], mode => $args[1] } : super; 
-}; 
+sub _build_slurp ( $self ) { 
+    return do {         
+        $self->_set_separator( undef ); 
+        $self->read_fh 
+    }
+}
+
+sub _build_line ( $self ) { 
+    return $self->read_fh 
+} 
+
+sub _build_paragraph ( $self ) { 
+    return do {         
+        $self->_set_separator( '' ); 
+        $self->read_fh 
+    }
+} 
 
 __PACKAGE__->meta->make_immutable;
 
-1; 
+1 
