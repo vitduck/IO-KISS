@@ -1,14 +1,15 @@
 package IO::KISS; 
 
 use Moose; 
-use MooseX::Types; 
+use MooseX::Types::Moose qw( Str Ref GlobRef );  
+use Moose::Util::TypeConstraints qw( enum ); 
 use namespace::autoclean; 
 use feature qw( state switch );  
 use experimental qw( signatures smartmatch );  
 
 has 'stream', ( 
     is        => 'ro', 
-    isa       => 'Str | Ref', 
+    isa       => Str | Ref, 
     required  => 1, 
 ); 
 
@@ -20,7 +21,7 @@ has 'mode', (
 
 has 'fh', ( 
     is        => 'ro', 
-    isa       => 'GlobRef', 
+    isa       => GlobRef, 
     lazy      => 1, 
     init_arg  => undef,
     builder   => '_build_fh', 
@@ -37,25 +38,25 @@ override BUILDARGS => sub ( $class, @args ) {
 # read
 sub slurp ( $self ) { 
     local $/ = undef; 
-    return readline $self->fh;  
+    return readline $self->fh 
 }
 
 sub get_line ( $self ) { 
-    return readline $self->fh;  
+    return scalar( readline $self->fh ) 
 } 
 
 sub get_lines ( $self ) { 
-    return my @lines = readline $self->fh; 
+    return ( readline $self->fh ) 
 } 
 
 sub get_paragraph ( $self ) { 
     local $/ = ''; 
-    return readline $self->fh;  
+    return sclar( readline $self->fh ) 
 } 
 
 sub get_paragraphs ( $self ) { 
     local $/ = ''; 
-    return my @paragraphs = readline $self->fh;  
+    return ( readline $self->fh ) 
 } 
 
 # write
