@@ -1,6 +1,7 @@
 package IO::Writer; 
 
 use Moose::Role; 
+
 use namespace::autoclean; 
 use experimental qw( signatures ); 
 
@@ -16,7 +17,10 @@ has 'writer', (
     lazy      => 1, 
     init_arg  => undef, 
     builder   => '_build_writer', 
-    handles   => { %write_delegation, close_writer => 'close' }
+    handles   => { 
+        %write_delegation, 
+        close_writer => 'close' 
+    }
 ); 
 
 1 

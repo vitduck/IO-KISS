@@ -1,8 +1,9 @@
 package IO::KISS; 
 
 use Moose; 
-use MooseX::Types::Moose qw( Str Ref GlobRef );  
+use MooseX::Types::Moose qw( Bool Str Ref GlobRef );  
 use Moose::Util::TypeConstraints qw( enum ); 
+
 use namespace::autoclean; 
 use feature qw( state switch );  
 use experimental qw( signatures smartmatch );  
@@ -19,6 +20,13 @@ has 'mode', (
     required  => 1, 
 ); 
 
+has 'chomp', ( 
+    is        => 'ro', 
+    isa       => Bool, 
+    lazy      => 1, 
+    default   => 0, 
+); 
+
 has 'fh', ( 
     is        => 'ro', 
     isa       => GlobRef, 
@@ -28,54 +36,49 @@ has 'fh', (
 ); 
 
 override BUILDARGS => sub ( $class, @args ) { 
-    return (
-        @args == 2  ? 
-        { stream => $args[0], mode => $args[1] } : 
+    return 
+        @args == 2  ? { stream => $args[0], mode => $args[1] } : 
+        @args == 3  ? { stream => $args[0], mode => $args[1], chomp => $args[2] } :
         super 
-    )
 }; 
 
-# read
-sub slurp ( $self ) { 
-    local $/ = undef; 
-    return readline $self->fh 
-}
+# read 
+sub slurp          ( $self ) { return scalar $self->_readline( undef ) }
+sub get_line       ( $self ) { return scalar $self->_readline          } 
+sub get_lines      ( $self ) { return $self->_readline                 } 
+sub get_paragraph  ( $self ) { return scalar $self->_readline ( '' )   }
+sub get_paragraphs ( $self ) { return $self->_readline ( '' )          }
 
-sub get_line ( $self ) { 
-    return scalar( readline $self->fh ) 
-} 
+# write 
+sub print  ( $self, @items )          { print { $self->fh } "@items\n"       } 
+sub printf ( $self, $format, @items ) { printf { $self->fh } $format, @items }
 
-sub get_lines ( $self ) { 
-    return ( readline $self->fh ) 
-} 
-
-sub get_paragraph ( $self ) { 
-    local $/ = ''; 
-    return sclar( readline $self->fh ) 
-} 
-
-sub get_paragraphs ( $self ) { 
-    local $/ = ''; 
-    return ( readline $self->fh ) 
-} 
-
-# write
-sub print ( $self, @items ) { 
-    print { $self->fh } "@items\n"; 
-} 
-
-sub printf ( $self, $format, @items ) { 
-    printf { $self->fh } $format, @items; 
-}
-
-# close filehandler
+# close fh 
 sub close ( $self ) { 
-    use autodie qw( close );  
-    close $self->fh; 
+    use autodie qw( close ); 
+    close $self->fh 
+}  
+
+# wrapper of perl's readline 
+sub _readline ( $self, $separator = "\n" ) { 
+    local $/ = $separator; 
+    return 
+        wantarray ? 
+        do { 
+            my @reads = readline $self->fh; 
+            chomp @reads if @reads && $self->chomp == 1;  
+            @reads 
+        } :  
+        do { 
+            my $read = readline $self->fh; 
+            chomp $read if $read && $self->chomp == 1; 
+            $read 
+        } ; 
 } 
 
+# wrapper of perl's open 
 sub _build_fh ( $self ) { 
-    use autodie qw( open );  
+    use autodie qw( open ); 
     my $fh; 
 
     given ( $self->mode ) { 

@@ -1,6 +1,7 @@
 package IO::Reader; 
 
 use Moose::Role; 
+
 use namespace::autoclean; 
 use experimental qw( signatures ); 
 
@@ -16,7 +17,10 @@ has 'reader', (
     lazy      => 1, 
     init_arg  => undef, 
     builder   => '_build_reader', 
-    handles   => { %read_delegation, close_reader => 'close' }
+    handles   => { 
+        %read_delegation, 
+        close_reader => 'close' 
+    }
 ); 
 
 1 

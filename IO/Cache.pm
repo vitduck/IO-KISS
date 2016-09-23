@@ -2,6 +2,7 @@ package IO::Cache;
 
 use Moose::Role; 
 use MooseX::Types::Moose qw( HashRef );
+
 use namespace::autoclean; 
 use experimental qw( signatures ); 
 
@@ -14,7 +15,9 @@ has 'cache', (
     lazy      => 1, 
     init_arg  => undef, 
     builder   => '_build_cache', 
-    handles   => { read => 'get' }, 
+    handles   => { 
+        read => 'get' 
+    }, 
 ); 
 
 1 
