@@ -8,7 +8,7 @@ use namespace::autoclean;
 use feature qw( state switch );  
 use experimental qw( signatures smartmatch );  
 
-has 'stream', ( 
+has 'input', ( 
     is        => 'ro', 
     isa       => Str | Ref, 
     required  => 1, 
@@ -37,8 +37,7 @@ has 'fh', (
 
 override BUILDARGS => sub ( $class, @args ) { 
     return 
-        @args == 2  ? { stream => $args[0], mode => $args[1] } : 
-        @args == 3  ? { stream => $args[0], mode => $args[1], chomp => $args[2] } :
+        @args == 2  ? { input => $args[0], mode => $args[1] } : 
         super 
 }; 
 
@@ -82,9 +81,9 @@ sub _build_fh ( $self ) {
     my $fh; 
 
     given ( $self->mode ) { 
-        when ( 'r' ) { open $fh, '<' , $self->stream } 
-        when ( 'w' ) { open $fh, '>' , $self->stream } 
-        when ( 'a' ) { open $fh, '>>', $self->stream }
+        when ( 'r' ) { open $fh, '<' , $self->input } 
+        when ( 'w' ) { open $fh, '>' , $self->input } 
+        when ( 'a' ) { open $fh, '>>', $self->input }
     }
 
     return $fh; 
