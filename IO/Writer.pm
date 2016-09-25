@@ -5,6 +5,8 @@ use Moose::Role;
 use namespace::autoclean; 
 use experimental qw( signatures ); 
 
+requires qw( _build_writer ); 
+
 # from IO::KISS
 my @write_methods = qw( print printf ); 
 

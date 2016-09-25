@@ -5,8 +5,14 @@ use Moose::Role;
 use namespace::autoclean; 
 use experimental qw( signatures ); 
 
+requires qw( _build_reader ); 
+
 # from IO::KISS
-my @read_methods  = qw( slurp get_line get_lines get_paragraph get_paragraphs ); 
+my @read_methods  = qw( 
+    slurp 
+    get_line get_lines 
+    get_paragraph get_paragraphs 
+); 
 
 # somewhat akward delegation  
 my %read_delegation  = map { $_ => $_ } @read_methods;
@@ -19,6 +25,7 @@ has 'reader', (
     builder   => '_build_reader', 
     handles   => { 
         %read_delegation, 
+        chomp_reader => 'chomp', 
         close_reader => 'close' 
     }
 ); 
