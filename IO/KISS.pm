@@ -50,31 +50,29 @@ override BUILDARGS => sub ( $class, @args ) {
     return 
         @args == 2 
         ? do { 
-            ref( $args[0] ) ? 
-            return { string => $args[0], mode => $args[1] } : 
-            return { file   => $args[0], mode => $args[1] } 
-        } 
-        : super 
+            ref( $args[0] )  
+            ? return { string => $args[0], mode => $args[1] }  
+            : return { file   => $args[0], mode => $args[1] } } 
+        : do { super } 
 }; 
 
 # read 
 sub slurp          ( $self ) { return scalar $self->_readline( undef ) } 
 sub get_line       ( $self ) { return scalar $self->_readline }  
-sub get_lines      ( $self ) { return        $self->_readline } 
 sub get_paragraph  ( $self ) { return scalar $self->_readline( '' ) } 
+sub get_lines      ( $self ) { return        $self->_readline }
 sub get_paragraphs ( $self ) { return        $self->_readline( '' ) }
 
-# print
-sub print  ( $self, @items )          { print { $self->fh } "@items\n" } 
+# method 
+sub print  ( $self, @items )          { print  { $self->fh } "@items\n" } 
 sub printf ( $self, $format, @items ) { printf { $self->fh } $format, @items } 
 
-# close fh
+# close fh 
 sub close ( $self ) { 
     use autodie qw( close ); 
     close $self->fh 
 }  
 
-# native
 sub _build_fh ( $self ) { 
     return $self->_open_fh( $self->file )   if $self->has_file;  
     return $self->_open_fh( $self->string ) if $self->has_string; 
@@ -99,17 +97,15 @@ sub _readline ( $self, $separator = "\n" ) {
     local $/ = $separator; 
 
     return 
-        wantarray ? 
-        do { 
+        wantarray 
+        ? do { 
             my @reads = readline $self->fh; 
             chomp @reads if @reads && $self->do_chomp;  
-            @reads 
-        } :  
-        do { 
+            @reads } 
+        : do { 
             my $read = readline $self->fh; 
             chomp $read if $read && $self->do_chomp; 
-            $read 
-        } ; 
+            $read  }  
 } 
 
 __PACKAGE__->meta->make_immutable;

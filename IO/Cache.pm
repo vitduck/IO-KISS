@@ -14,10 +14,7 @@ has 'cache', (
     traits    => [ 'Hash' ], 
     lazy      => 1, 
     init_arg  => undef, 
-    builder   => '_build_cache', 
-    handles   => { 
-        read => 'get' 
-    }, 
+    builder   => '_build_cache' 
 ); 
 
 1 
