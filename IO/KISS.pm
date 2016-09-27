@@ -57,15 +57,34 @@ override BUILDARGS => sub ( $class, @args ) {
 }; 
 
 # read 
-sub slurp          ( $self ) { return scalar $self->_readline( undef ) } 
-sub get_line       ( $self ) { return scalar $self->_readline }  
-sub get_paragraph  ( $self ) { return scalar $self->_readline( '' ) } 
-sub get_lines      ( $self ) { return        $self->_readline }
-sub get_paragraphs ( $self ) { return        $self->_readline( '' ) }
+sub slurp ( $self ) { 
+    return scalar $self->_readline( undef ) 
+} 
+
+sub get_line  ( $self ) { 
+    return scalar $self->_readline 
+}  
+
+sub get_lines ( $self ) { 
+    return $self->_readline 
+}
+
+sub get_paragraph ( $self ) { 
+    return scalar $self->_readline( '' ) 
+} 
+
+sub get_paragraphs ( $self ) { 
+    return $self->_readline( '' ) 
+}
 
 # method 
-sub print  ( $self, @items )          { print  { $self->fh } "@items\n" } 
-sub printf ( $self, $format, @items ) { printf { $self->fh } $format, @items } 
+sub print  ( $self, @items ) {
+    print { $self->fh } "@items\n" 
+} 
+
+sub printf ( $self, $format, @items ) { 
+    printf { $self->fh } $format, @items 
+} 
 
 # close fh 
 sub close ( $self ) { 
@@ -94,18 +113,24 @@ sub _open_fh ( $self, $io_stream ) {
 
 # wrapper of perl's readline
 sub _readline ( $self, $separator = "\n" ) { 
-    local $/ = $separator; 
-
     return 
         wantarray 
         ? do { 
-            my @reads = readline $self->fh; 
+            my @reads = do { 
+                local $/ = $separator; 
+                readline $self->fh 
+            }; 
             chomp @reads if @reads && $self->do_chomp;  
-            @reads } 
+            @reads 
+        } 
         : do { 
-            my $read = readline $self->fh; 
+            my $read = do { 
+                local $/ = $separator; 
+                readline $self->fh 
+            }; 
             chomp $read if $read && $self->do_chomp; 
-            $read  }  
+            $read  
+        }  
 } 
 
 __PACKAGE__->meta->make_immutable;
