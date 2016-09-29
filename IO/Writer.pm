@@ -1,17 +1,11 @@
 package IO::Writer; 
 
 use Moose::Role; 
-
 use namespace::autoclean; 
+
 use experimental qw( signatures ); 
 
 requires qw( _build_writer ); 
-
-# from IO::KISS
-my @write_methods = qw( print printf ); 
-
-# somewhat akward delegation  
-my %write_delegation = map { $_ => $_ } @write_methods;  
 
 has 'writer', ( 
     is        => 'ro', 
@@ -19,9 +13,12 @@ has 'writer', (
     lazy      => 1, 
     init_arg  => undef, 
     builder   => '_build_writer', 
+    clearer   => '_clear_writer', 
+
     handles   => { 
-        %write_delegation, 
-        close_writer => 'close' 
+        _print        => 'print', 
+        _printf       => 'printf', 
+        _close_writer => 'close' 
     }
 ); 
 

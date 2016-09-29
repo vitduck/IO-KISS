@@ -1,21 +1,11 @@
 package IO::Reader; 
 
 use Moose::Role; 
-
 use namespace::autoclean; 
+
 use experimental qw( signatures ); 
 
 requires qw( _build_reader ); 
-
-# from IO::KISS
-my @read_methods  = qw( 
-    slurp 
-    get_line get_lines 
-    get_paragraph get_paragraphs 
-); 
-
-# somewhat akward delegation  
-my %read_delegation  = map { $_ => $_ } @read_methods;
 
 has 'reader', ( 
     is        => 'ro', 
@@ -23,10 +13,16 @@ has 'reader', (
     lazy      => 1, 
     init_arg  => undef, 
     builder   => '_build_reader', 
+    clearer   => '_clear_reader', 
+
     handles   => { 
-        %read_delegation, 
-        chomp_reader => 'chomp', 
-        close_reader => 'close' 
+        _slurp          => 'slurp', 
+        _get_line       => 'get_line', 
+        _get_lines      => 'get_lines', 
+        _get_paragraph  => 'get_paragraph', 
+        _get_paragraphs => 'get_paragraphs', 
+        _chomp_reader   => 'chomp', 
+        _close_reader   => 'close' 
     }
 ); 
 

@@ -3,8 +3,8 @@ package IO::KISS;
 use Moose; 
 use MooseX::Types::Moose qw( Bool Str Ref GlobRef );  
 use Moose::Util::TypeConstraints qw( enum ); 
-
 use namespace::autoclean; 
+
 use feature qw( state switch );  
 use experimental qw( signatures smartmatch );  
 
@@ -52,39 +52,21 @@ override BUILDARGS => sub ( $class, @args ) {
         ? do { 
             ref( $args[0] )  
             ? return { string => $args[0], mode => $args[1] }  
-            : return { file   => $args[0], mode => $args[1] } } 
-        : do { super } 
+            : return { file   => $args[0], mode => $args[1] } 
+        } 
+        : super 
 }; 
 
 # read 
-sub slurp ( $self ) { 
-    return scalar $self->_readline( undef ) 
-} 
+sub slurp          ( $self ) { return scalar $self->_readline( undef ) } 
+sub get_line       ( $self ) { return scalar $self->_readline }  
+sub get_lines      ( $self ) { return        $self->_readline }
+sub get_paragraph  ( $self ) { return scalar $self->_readline( '' ) }
+sub get_paragraphs ( $self ) { return $self->_readline( '' ) }
 
-sub get_line  ( $self ) { 
-    return scalar $self->_readline 
-}  
-
-sub get_lines ( $self ) { 
-    return $self->_readline 
-}
-
-sub get_paragraph ( $self ) { 
-    return scalar $self->_readline( '' ) 
-} 
-
-sub get_paragraphs ( $self ) { 
-    return $self->_readline( '' ) 
-}
-
-# method 
-sub print  ( $self, @items ) {
-    print { $self->fh } "@items\n" 
-} 
-
-sub printf ( $self, $format, @items ) { 
-    printf { $self->fh } $format, @items 
-} 
+# write 
+sub print  ( $self, @items )          { print { $self->fh } "@items\n" } 
+sub printf ( $self, $format, @items ) { printf { $self->fh } $format, @items } 
 
 # close fh 
 sub close ( $self ) { 
