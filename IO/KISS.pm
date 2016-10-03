@@ -58,34 +58,15 @@ override BUILDARGS => sub ( $class, @args ) {
 }; 
 
 # read 
-sub slurp ( $self ) { 
-    return scalar $self->_readline( undef ) 
-} 
-
-sub get_line ( $self ) { 
-    return scalar $self->_readline 
-}  
-
-sub get_lines ( $self ) { 
-    return $self->_readline 
-}
-
-sub get_paragraph ( $self ) { 
-    return scalar $self->_readline( '' ) 
-}
-
-sub get_paragraphs ( $self ) { 
-    return $self->_readline( '' ) 
-}
+sub slurp          ( $self ) { return scalar $self->_readline( undef ) } 
+sub get_line       ( $self ) { return scalar $self->_readline          }  
+sub get_lines      ( $self ) { return        $self->_readline          }
+sub get_paragraph  ( $self ) { return scalar $self->_readline( '' )    }
+sub get_paragraphs ( $self ) { return        $self->_readline( '' )    }
 
 # write 
-sub print ( $self, @items ) { 
-    print { $self->fh } "@items\n" 
-} 
-
-sub printf ( $self, $format, @items ) { 
-    printf { $self->fh } $format, @items 
-} 
+sub print  ( $self, @items )          { print { $self->fh } "@items\n"       } 
+sub printf ( $self, $format, @items ) { printf { $self->fh } $format, @items } 
 
 # close fh 
 sub close ( $self ) { 
@@ -121,6 +102,7 @@ sub _readline ( $self, $separator = "\n" ) {
                 local $/ = $separator; 
                 readline $self->fh 
             }; 
+
             chomp @reads if @reads && $self->_chomp;  
             @reads 
         } 
@@ -129,6 +111,7 @@ sub _readline ( $self, $separator = "\n" ) {
                 local $/ = $separator; 
                 readline $self->fh 
             }; 
+
             chomp $read if $read && $self->_chomp; 
             $read  
         }  

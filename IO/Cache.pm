@@ -15,7 +15,12 @@ has 'cache', (
     lazy      => 1, 
     init_arg  => undef, 
     builder   => '_build_cache',  
-    clearer   => '_clear_cache'
+    clearer   => '_clear_cache', 
+    
+    handles   => { 
+        _list_cached => 'keys', 
+        _get_cached  => 'get'
+    }
 ); 
 
 1 
