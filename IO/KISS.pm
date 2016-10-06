@@ -4,7 +4,6 @@ use Moose;
 use MooseX::Types::Moose qw( Bool Str Ref GlobRef );  
 use Moose::Util::TypeConstraints qw( enum ); 
 use namespace::autoclean; 
-
 use feature qw( state switch );  
 use experimental qw( signatures smartmatch );  
 
@@ -57,16 +56,36 @@ override BUILDARGS => sub ( $class, @args ) {
         : super 
 }; 
 
-# read 
-sub slurp          ( $self ) { return scalar $self->_readline( undef ) } 
-sub get_line       ( $self ) { return scalar $self->_readline          }  
-sub get_lines      ( $self ) { return        $self->_readline          }
-sub get_paragraph  ( $self ) { return scalar $self->_readline( '' )    }
-sub get_paragraphs ( $self ) { return        $self->_readline( '' )    }
+# read ( scalar )
+sub slurp ( $self ) { 
+    return scalar $self->_readline( undef ) 
+} 
+
+sub get_line ( $self ) { 
+    return scalar $self->_readline          
+}  
+
+sub get_paragraph ( $self ) { 
+    return scalar $self->_readline( '' )    
+}
+
+# read ( list )
+sub get_lines ( $self ) { 
+    return $self->_readline          
+}
+
+sub get_paragraphs ( $self ) { 
+    return $self->_readline( '' )    
+}
 
 # write 
-sub print  ( $self, @items )          { print { $self->fh } "@items\n"       } 
-sub printf ( $self, $format, @items ) { printf { $self->fh } $format, @items } 
+sub print ( $self, @items ) { 
+    print { $self->fh } "@items\n"       
+} 
+
+sub printf ( $self, $format, @items ) { 
+    printf { $self->fh } $format, @items 
+} 
 
 # close fh 
 sub close ( $self ) { 
