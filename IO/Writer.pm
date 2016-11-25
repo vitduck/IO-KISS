@@ -1,29 +1,33 @@
 package IO::Writer; 
 
-use Moose::Role; 
-use MooseX::Types::Moose qw( Str ); 
 use IO::KISS; 
+
+use Moose::Role; 
+use MooseX::Types::Moose 'Str'; 
 use namespace::autoclean; 
-use experimental qw( signatures ); 
+
+use experimental 'signatures'; 
 
 has 'output', ( 
     is       => 'ro', 
     isa      => Str,  
+    lazy     => 1,
+    default  => ''
 ); 
 
 has 'o_mode', ( 
     is       => 'ro', 
     isa      => Str, 
-    lazy     => 1, 
     init_arg => undef, 
+    lazy     => 1, 
     default  => 'w' 
 ); 
 
 has 'writer', ( 
     is        => 'ro', 
     isa       => 'IO::KISS', 
-    lazy      => 1, 
     init_arg  => undef, 
+    lazy      => 1, 
     builder   => '_build_writer', 
     clearer   => '_clear_writer', 
     handles   => { 

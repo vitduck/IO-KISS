@@ -2,8 +2,9 @@ package IO::KISS;
 
 use Moose; 
 use MooseX::Types::Moose qw( Bool Str Ref GlobRef );  
-use Moose::Util::TypeConstraints qw( enum ); 
+use Moose::Util::TypeConstraints 'enum'; 
 use namespace::autoclean; 
+
 use feature qw( state switch );  
 use experimental qw( signatures smartmatch );  
 
@@ -71,11 +72,11 @@ sub get_paragraph ( $self ) {
 
 # read ( list )
 sub get_lines ( $self ) { 
-    return $self->_readline          
+    return $self->_readline       
 }
 
 sub get_paragraphs ( $self ) { 
-    return $self->_readline( '' )    
+    return $self->_readline( '' ) 
 }
 
 # write 
@@ -91,12 +92,15 @@ sub printf ( $self, $format, @items ) {
 sub close ( $self ) { 
     use autodie qw( close ); 
     close $self->fh 
-}  
-
-sub _build_fh ( $self ) { 
-    return $self->_open_fh( $self->file )   if $self->has_file;  
-    return $self->_open_fh( $self->string ) if $self->has_string; 
 } 
+
+# build fh to either a file or string 
+sub _build_fh ( $self ) { 
+    return ( 
+        $self->has_file   ? $self->_open_fh( $self->file )   : 
+        $self->has_string ? $self->_open_fh( $self->string ) : undef
+    )
+}
 
 # wrapper of perl's open 
 sub _open_fh ( $self, $io_stream ) { 
@@ -113,15 +117,15 @@ sub _open_fh ( $self, $io_stream ) {
 } 
 
 # wrapper of perl's readline
+# the wantarray test differentiate get_line and get_lines 
 sub _readline ( $self, $separator = "\n" ) { 
-    return 
+    return (
         wantarray 
         ? do { 
             my @reads = do { 
                 local $/ = $separator; 
                 readline $self->fh 
             }; 
-
             chomp @reads if @reads && $self->_chomp;  
             @reads 
         } 
@@ -130,10 +134,10 @@ sub _readline ( $self, $separator = "\n" ) {
                 local $/ = $separator; 
                 readline $self->fh 
             }; 
-
             chomp $read if $read && $self->_chomp; 
             $read  
         }  
+    )
 } 
 
 __PACKAGE__->meta->make_immutable;

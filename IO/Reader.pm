@@ -1,28 +1,18 @@
 package IO::Reader; 
 
+use IO::KISS; 
+
 use Moose::Role; 
 use MooseX::Types::Moose qw( Str HashRef ); 
-use IO::KISS; 
 use namespace::autoclean; 
-use experimental qw( signatures ); 
+
+use experimental 'signatures'; 
 
 has 'input', ( 
     is       => 'ro', 
     isa      => Str,  
-); 
-
-has 'cache', ( 
-    is        => 'ro', 
-    isa       => HashRef, 
-    traits    => [ qw( Hash ) ], 
-    lazy      => 1, 
-    init_arg  => undef, 
-    builder   => '_build_cache',  
-    clearer   => '_clear_cache', 
-    handles   => { 
-        _list_cached => 'keys', 
-        _get_cached  => 'get'
-    }
+    lazy     => 1, 
+    default  => '' 
 ); 
 
 has 'reader', ( 
