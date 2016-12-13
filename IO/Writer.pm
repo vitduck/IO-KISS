@@ -1,18 +1,16 @@
 package IO::Writer; 
 
-use IO::KISS; 
-
 use Moose::Role; 
 use MooseX::Types::Moose 'Str'; 
-use namespace::autoclean; 
+use IO::KISS; 
 
-use experimental 'signatures'; 
+use namespace::autoclean; 
+use experimental 'signatures';  
 
 has 'output', ( 
     is       => 'ro', 
     isa      => Str,  
-    lazy     => 1,
-    default  => ''
+    reader   => 'get_output'
 ); 
 
 has 'o_mode', ( 
@@ -20,6 +18,7 @@ has 'o_mode', (
     isa      => Str, 
     init_arg => undef, 
     lazy     => 1, 
+    reader   => 'get_o_mode',
     default  => 'w' 
 ); 
 
@@ -29,19 +28,12 @@ has 'writer', (
     init_arg  => undef, 
     lazy      => 1, 
     builder   => '_build_writer', 
-    clearer   => '_clear_writer', 
-    handles   => { 
-        _print        => 'print', 
-        _printf       => 'printf', 
-        _close_writer => 'close' 
-    }
+    clearer   => 'clear_writer', 
+    handles   => [ qw/print printf/ ]
 ); 
 
 sub _build_writer ( $self ) {
-    return IO::KISS->new( 
-        file   => $self->output, 
-        mode   => $self->o_mode,   
-    ) 
+    return IO::KISS->new( $self->get_output, $self->get_o_mode ) 
 } 
 
 1 

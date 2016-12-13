@@ -1,29 +1,24 @@
 package IO::KISS; 
 
 use Moose; 
-use MooseX::Types::Moose qw( Bool Str Ref GlobRef );  
-use Moose::Util::TypeConstraints 'enum'; 
+use MooseX::Types::Moose qw/Bool Str Ref GlobRef/;  
+use Moose::Util::TypeConstraints 'enum';  
+
 use namespace::autoclean; 
+use feature qw/state switch/;  
+use experimental qw/signatures smartmatch/;  
 
-use feature qw( state switch );  
-use experimental qw( signatures smartmatch );  
-
-has 'file', ( 
+has 'io', ( 
     is        => 'ro', 
-    isa       => Str, 
-    predicate => 'has_file' 
-); 
-
-has 'string', ( 
-    is        => 'ro', 
-    isa       => Ref, 
-    predicate => 'has_string'
+    isa       => Str | Ref, 
+    reader    => 'get_io'
 ); 
 
 has 'mode', ( 
     is        => 'ro', 
-    isa       => enum( [ qw( r w a ) ] ),  
+    isa       => enum( [ qw/r w a/ ] ),  
     required  => 1, 
+    reader    => 'get_mode',
 ); 
 
 has 'fh', ( 
@@ -31,114 +26,107 @@ has 'fh', (
     isa       => GlobRef, 
     lazy      => 1, 
     init_arg  => undef,
-    builder   => '_build_fh'
+    reader    => 'get_fh', 
+    clearer   => 'clear_fh', 
+    builder   => '_build_fh' 
 ); 
 
 has '_chomp', ( 
-    is        => 'rw', 
+    is        => 'ro', 
     isa       => Bool, 
     traits    => [ 'Bool' ], 
     lazy      => 1, 
+    init_arg  => undef,
     default   => 0, 
-    handles   => { 
-        chomp => 'set'
-    }
+    handles   => { chomp => 'set' }
 );
 
 # simplified costructor
 override BUILDARGS => sub ( $class, @args ) { 
     return 
         @args == 2 
-        ? do { 
-            ref( $args[0] )  
-            ? return { string => $args[0], mode => $args[1] }  
-            : return { file   => $args[0], mode => $args[1] } 
-        } 
+        ? { io => $args[0], mode => $args[1] }  
         : super 
 }; 
 
 # read ( scalar )
 sub slurp ( $self ) { 
-    return scalar $self->_readline( undef ) 
+    return scalar $self->readline( undef ) 
 } 
 
 sub get_line ( $self ) { 
-    return scalar $self->_readline          
+    return scalar $self->readline          
 }  
 
 sub get_paragraph ( $self ) { 
-    return scalar $self->_readline( '' )    
+    return scalar $self->readline( '' )    
 }
 
 # read ( list )
 sub get_lines ( $self ) { 
-    return $self->_readline       
+    return $self->readline       
 }
 
 sub get_paragraphs ( $self ) { 
-    return $self->_readline( '' ) 
+    return $self->readline( '' ) 
 }
 
 # write 
 sub print ( $self, @items ) { 
-    print { $self->fh } "@items\n"       
+    print { $self->get_fh } "@items\n"       
 } 
 
 sub printf ( $self, $format, @items ) { 
-    printf { $self->fh } $format, @items 
+    printf { $self->get_fh } $format, @items 
 } 
-
-# close fh 
-sub close ( $self ) { 
-    use autodie qw( close ); 
-    close $self->fh 
-} 
-
-# build fh to either a file or string 
-sub _build_fh ( $self ) { 
-    return ( 
-        $self->has_file   ? $self->_open_fh( $self->file )   : 
-        $self->has_string ? $self->_open_fh( $self->string ) : undef
-    )
-}
 
 # wrapper of perl's open 
-sub _open_fh ( $self, $io_stream ) { 
-    use autodie qw( open ); 
+sub open ( $self, $io ) { 
+    use autodie 'open'; 
     my $fh; 
 
-    given ( $self->mode ) { 
-        when ( 'r' ) { open $fh, '<' , $io_stream } 
-        when ( 'w' ) { open $fh, '>' , $io_stream } 
-        when ( 'a' ) { open $fh, '>>', $io_stream }
+    given ( $self->get_mode ) { 
+        when ( 'r' ) { open $fh, '<' , $io } 
+        when ( 'w' ) { open $fh, '>' , $io } 
+        when ( 'a' ) { open $fh, '>>', $io }
     }
 
     return $fh; 
 } 
 
+sub close ( $self ) { 
+    use autodie 'close'; 
+    close $self->get_fh 
+} 
+
 # wrapper of perl's readline
 # the wantarray test differentiate get_line and get_lines 
-sub _readline ( $self, $separator = "\n" ) { 
+sub readline ( $self, $separator = "\n" ) { 
     return (
         wantarray 
         ? do { 
             my @reads = do { 
                 local $/ = $separator; 
-                readline $self->fh 
+                readline $self->get_fh 
             }; 
-            chomp @reads if @reads && $self->_chomp;  
+            chomp @reads if @reads && $self->_chomp; 
             @reads 
         } 
         : do { 
             my $read = do { 
                 local $/ = $separator; 
-                readline $self->fh 
+                readline $self->get_fh 
             }; 
             chomp $read if $read && $self->_chomp; 
             $read  
         }  
     )
 } 
+
+# build fh to either a file or string 
+sub _build_fh ( $self ) { 
+    return $self->open( $self->get_io )
+}
 
 __PACKAGE__->meta->make_immutable;
 

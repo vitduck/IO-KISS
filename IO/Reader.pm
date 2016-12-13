@@ -1,18 +1,16 @@
 package IO::Reader; 
 
+use Moose::Role; 
+use MooseX::Types::Moose qw/Str HashRef/; 
 use IO::KISS; 
 
-use Moose::Role; 
-use MooseX::Types::Moose qw( Str HashRef ); 
 use namespace::autoclean; 
-
-use experimental 'signatures'; 
+use experimental 'signatures';  
 
 has 'input', ( 
     is       => 'ro', 
     isa      => Str,  
-    lazy     => 1, 
-    default  => '' 
+    reader   => 'get_input'
 ); 
 
 has 'reader', ( 
@@ -21,24 +19,12 @@ has 'reader', (
     lazy      => 1, 
     init_arg  => undef, 
     builder   => '_build_reader', 
-    clearer   => '_clear_reader', 
-    handles   => { 
-        _slurp          => 'slurp', 
-        _get_line       => 'get_line', 
-        _get_lines      => 'get_lines', 
-        _get_paragraph  => 'get_paragraph', 
-        _get_paragraphs => 'get_paragraphs', 
-        _chomp_reader   => 'chomp', 
-        _close_reader   => 'close' 
-    }
+    clearer   => 'clear_reader', 
+    handles   => [ qw/chomp slurp get_line get_lines get_paragraph get_paragraphs/ ] 
 ); 
 
 sub _build_reader ( $self ) {
-    return IO::KISS->new( 
-        file   => $self->input, 
-        mode   => 'r',  
-        _chomp => 1
-    ) 
+    return IO::KISS->new( $self->get_input, 'r' ) 
 } 
 
 1 
